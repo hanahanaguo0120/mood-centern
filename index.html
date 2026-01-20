@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>身心容納之窗：情緒氣象台 (單機版)</title>
+    <title>小花老師的情緒氣象台 v2.1 (可單筆刪除)</title>
     
     <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
@@ -13,11 +13,11 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -25,239 +25,346 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
 
         // --- Icons ---
-        const IconBase = ({ children, className, ...props }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
+        const Icon = ({ d, className, ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><path d={d} /></svg>
         );
-        const Activity = (p) => <IconBase {...p}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></IconBase>;
-        const CloudSun = (p) => <IconBase {...p}><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"/></IconBase>;
-        const Flame = (p) => <IconBase {...p}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.148-.224-4.078 1.218-5.19C4.638 6 6 8.129 6 11.852V12a4 4 0 0 0 2.5 2.5Z"/><path d="M10.5 8.112A6.492 6.492 0 0 1 14 6c.966 2.768 0 5.253-2.5 5.5"/><path d="M13.5 16.5A5.5 5.5 0 0 0 19 11v-1c0-1.667-1-3-3-4.5A6.5 6.5 0 0 1 14 14a2.235 2.235 0 0 0 .5 4.5Z"/><path d="M12.5 13.5a2 2 0 0 0 1.996 2.05"/></IconBase>;
-        const Snowflake = (p) => <IconBase {...p}><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></IconBase>;
-        const Trash2 = (p) => <IconBase {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></IconBase>;
-        const Download = (p) => <IconBase {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></IconBase>;
-        const Info = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></IconBase>;
+        const Icons = {
+            Activity: (p) => <Icon {...p} d="M22 12h-4l-3 9L9 3l-3 9H2" />,
+            Calendar: (p) => <Icon {...p} d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />,
+            TrendingUp: (p) => <Icon {...p} d="M23 6l-9.5 9.5-5-5L1 18" />,
+            List: (p) => <Icon {...p} d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />,
+            Trash2: (p) => <Icon {...p} d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />,
+            Download: (p) => <Icon {...p} d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />,
+            X: (p) => <Icon {...p} d="M18 6 6 18M6 6l12 12" />, // 新增叉叉圖示
+            Flame: (p) => <Icon {...p} d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.148-.224-4.078 1.218-5.19C4.638 6 6 8.129 6 11.852V12a4 4 0 0 0 2.5 2.5ZM10.5 8.112A6.492 6.492 0 0 1 14 6c.966 2.768 0 5.253-2.5 5.5ZM13.5 16.5A5.5 5.5 0 0 0 19 11v-1c0-1.667-1-3-3-4.5A6.5 6.5 0 0 1 14 14a2.235 2.235 0 0 0 .5 4.5ZM12.5 13.5a2 2 0 0 0 1.996 2.05" />,
+            CloudSun: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"/></svg>,
+            Snowflake: (p) => <Icon {...p} d="M2 12h20M12 2v20M20 16l-4-4 4-4M4 8l4 4-4 4M16 4l-4 4 4-4M8 20l4-4-4 4" />
+        };
 
-        // --- Chart Component ---
-        const MoodChart = ({ history, zones }) => {
+        const zones = [
+            { id: 'hyper', name: '能量過高', desc: '焦慮、生氣', color: 'bg-red-50 text-red-700 border-red-200', pointColor: '#f87171', icon: <Icons.Flame/>, min: 66, max: 100 },
+            { id: 'ok', name: '容納之窗', desc: '平穩、專注', color: 'bg-green-50 text-green-700 border-green-200', pointColor: '#4ade80', icon: <Icons.CloudSun/>, min: 34, max: 65 },
+            { id: 'hypo', name: '能量過低', desc: '無力、想睡', color: 'bg-blue-50 text-blue-700 border-blue-200', pointColor: '#60a5fa', icon: <Icons.Snowflake/>, min: 0, max: 33 }
+        ];
+
+        // --- Helper Functions ---
+        const formatDate = (dateObj) => dateObj.toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+        const getZone = (id) => zones.find(z => z.id === id);
+        const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+
+        // --- MoodChart Component (可滑動、有Tooltip) ---
+        const MoodChart = ({ data }) => {
             const containerRef = useRef(null);
             const [width, setWidth] = useState(0);
-            const height = 200;
-            const padding = 30;
+            const [hoveredPoint, setHoveredPoint] = useState(null);
+            const height = 220;
+            const paddingY = 30;
+            const paddingX = 20;
+            const pointSpacing = 50; // 點與點的間距
 
             useEffect(() => {
-                const updateWidth = () => containerRef.current && setWidth(containerRef.current.getBoundingClientRect().width);
-                updateWidth();
-                window.addEventListener('resize', updateWidth);
-                return () => window.removeEventListener('resize', updateWidth);
-            }, []);
+                // 計算總寬度，確保可以滑動
+                const requiredWidth = paddingX * 2 + (Math.max(data.length, 1) - 1) * pointSpacing;
+                setWidth(Math.max(requiredWidth, containerRef.current?.clientWidth || 0));
+            }, [data]);
 
-            const chartData = [...history].sort((a, b) => a.id - b.id);
-            
-            const getY = (intensity) => {
-                const availableHeight = height - (padding * 2);
-                return padding + ((100 - intensity) / 100 * availableHeight);
-            };
+            const getY = (intensity) => paddingY + ((100 - intensity) / 100 * (height - paddingY * 2));
 
-            const points = chartData.map((entry, index) => {
-                const x = chartData.length === 1 ? width / 2 : padding + (index * ((width - padding * 2) / (chartData.length - 1)));
-                return { x, y: getY(entry.intensity), entry };
-            });
+            const points = useMemo(() => data.map((entry, index) => ({
+                x: paddingX + index * pointSpacing,
+                y: getY(entry.intensity),
+                entry,
+                zone: getZone(entry.zone)
+            })), [data, width]);
 
-            const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + ` ${p.x},${p.y}`).join(' ');
+            const pathD = useMemo(() => points.map((p, i) => (i === 0 ? 'M' : 'L') + ` ${p.x},${p.y}`).join(' '), [points]);
 
             return (
-                <div ref={containerRef} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 w-full h-[240px] relative select-none">
-                    <svg width="100%" height="100%" className="overflow-visible">
-                        {/* Background Zones */}
-                        <rect x="0" y="0" width="100%" height="35%" fill="#FEF2F2" opacity="0.5" />
-                        <rect x="0" y="35%" width="100%" height="30%" fill="#F0FDF4" opacity="0.5" />
-                        <rect x="0" y="65%" width="100%" height="35%" fill="#EFF6FF" opacity="0.5" />
+                <div className="relative bg-white rounded-2xl shadow-sm border border-slate-200 h-[220px] overflow-hidden group">
+                    <div ref={containerRef} className="h-full overflow-x-auto custom-scrollbar relative">
+                        <svg width={width} height="100%" className="overflow-visible pointer-events-none">
+                            {/* 背景區域 */}
+                            <rect x="0" y="0" width="100%" height="35%" fill="#FEF2F2" opacity="0.5" />
+                            <rect x="0" y="35%" width="100%" height="30%" fill="#F0FDF4" opacity="0.5" />
+                            <rect x="0" y="65%" width="100%" height="35%" fill="#EFF6FF" opacity="0.5" />
+                            {/* 輔助線 */}
+                            <line x1="0" y1="35%" x2="100%" y2="35%" stroke="#fecaca" strokeWidth="1" strokeDasharray="4"/>
+                            <line x1="0" y1="65%" x2="100%" y2="65%" stroke="#bfdbfe" strokeWidth="1" strokeDasharray="4"/>
+                        </svg>
                         
-                        <text x="5" y="20" className="text-[10px] fill-red-400 font-bold">過高</text>
-                        <text x="5" y="50%" className="text-[10px] fill-green-500 font-bold dominant-baseline-middle">OK</text>
-                        <text x="5" y="95%" className="text-[10px] fill-blue-400 font-bold">過低</text>
-
-                        {/* Line */}
-                        {chartData.length > 1 && <path d={pathD} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" className="drop-shadow-sm" />}
-                        
-                        {/* Points */}
-                        {points.map((p, i) => (
-                            <circle key={i} cx={p.x} cy={p.y} r="6" 
-                                fill={p.entry.zone === 'hyper' ? '#f87171' : p.entry.zone === 'ok' ? '#4ade80' : '#60a5fa'} 
-                                stroke="white" strokeWidth="2"
-                            />
-                        ))}
-                    </svg>
-                    {chartData.length === 0 && (
-                        <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">
-                            尚無資料，請在下方新增
+                        {/* 文字標籤 (固定在左側) */}
+                        <div className="absolute left-2 top-0 h-full flex flex-col justify-between py-4 text-[10px] font-bold pointer-events-none z-10 leading-none" style={{height: height}}>
+                            <span className="text-red-400">過高</span>
+                            <span className="text-green-500 relative top-1">OK</span>
+                            <span className="text-blue-400">過低</span>
                         </div>
-                    )}
+
+                        <svg width={width} height="100%" className="absolute top-0 left-0 overflow-visible">
+                            {/* 折線 */}
+                            {data.length > 1 && <path d={pathD} fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round" className="drop-shadow-sm" />}
+                            
+                            {/* 資料點 (互動層) */}
+                            {points.map((p, i) => (
+                                <g key={p.entry.id} 
+                                   onMouseEnter={() => setHoveredPoint(p)} 
+                                   onMouseLeave={() => setHoveredPoint(null)}
+                                   className="cursor-pointer pointer-events-auto">
+                                    {/* 透明的大圓圈，增加滑鼠感應範圍 */}
+                                    <circle cx={p.x} cy={p.y} r="15" fill="transparent" />
+                                    {/* 實際顯示的點 */}
+                                    <circle cx={p.x} cy={p.y} r={hoveredPoint?.entry.id === p.entry.id ? 7 : 5}
+                                        fill={p.zone.pointColor} stroke="white" strokeWidth="2" 
+                                        className="transition-all duration-200" />
+                                </g>
+                            ))}
+                        </svg>
+
+                        {/* Tooltip */}
+                        {hoveredPoint && (
+                            <div className="absolute z-20 bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-lg border border-slate-100 text-xs pointer-events-none animate-fadeIn"
+                                 style={{ top: hoveredPoint.y - 55, left: hoveredPoint.x - 60, width: 120 }}>
+                                <div className="font-bold text-slate-700 mb-0.5">{hoveredPoint.entry.dateStr}</div>
+                                <div className="flex items-center gap-1 mb-1">
+                                    <div className="w-2 h-2 rounded-full" style={{background: hoveredPoint.zone.pointColor}}></div>
+                                    <span className="font-medium">{hoveredPoint.zone.name} (強度:{hoveredPoint.entry.intensity})</span>
+                                </div>
+                                {hoveredPoint.entry.note && <div className="text-slate-500 truncate">{hoveredPoint.entry.note}</div>}
+                            </div>
+                        )}
+
+                        {data.length === 0 && (
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm pointer-events-none">
+                                尚無資料，請在下方新增
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Calendar View Component ---
+        const CalendarView = ({ data, onSelectDate }) => {
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+            const firstDayOfWeek = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+            
+            const days = Array.from({ length: daysInMonth }, (_, i) => {
+                const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1);
+                const hasData = data.some(d => isSameDay(new Date(d.id), date));
+                return { date, hasData, dayNum: i + 1 };
+            });
+
+            const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+            const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+
+            return (
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 animate-fadeIn">
+                    <div className="flex justify-between items-center mb-4">
+                        <button onClick={prevMonth} className="p-1 text-slate-400 hover:text-slate-600">&lt;</button>
+                        <h3 className="font-bold text-slate-700">
+                            {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月
+                        </h3>
+                        <button onClick={nextMonth} className="p-1 text-slate-400 hover:text-slate-600">&gt;</button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2 text-slate-400 font-medium">
+                        <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                        {Array(firstDayOfWeek).fill(null).map((_, i) => <div key={`empty-${i}`}></div>)}
+                        {days.map(day => (
+                            <button key={day.dayNum} onClick={() => onSelectDate(day.date)}
+                                className={`aspect-square rounded-full flex flex-col items-center justify-center relative
+                                ${isSameDay(day.date, new Date()) ? 'bg-indigo-50 text-indigo-600 font-bold border border-indigo-100' : 'hover:bg-slate-50'}`}>
+                                {day.dayNum}
+                                {day.hasData && <div className="w-1 h-1 rounded-full bg-indigo-500 absolute bottom-1"></div>}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             );
         };
 
         // --- Main App ---
         const App = () => {
+            const [history, setHistory] = useState(() => {
+                try { return JSON.parse(localStorage.getItem('moodHistory_v2')) || []; } catch { return []; }
+            });
             const [selectedZone, setSelectedZone] = useState(null);
             const [intensity, setIntensity] = useState(50);
             const [note, setNote] = useState("");
-            const [showInfo, setShowInfo] = useState(false);
-            
-            // 讀取/儲存 LocalStorage
-            const [history, setHistory] = useState(() => {
-                try { return JSON.parse(localStorage.getItem('moodHistory_v1')) || []; } 
-                catch { return []; }
-            });
+            const [viewMode, setViewMode] = useState('chart'); // 'chart' or 'calendar'
+            const [filterDate, setFilterDate] = useState(null); // 用於月曆點選某一天
 
             useEffect(() => {
-                localStorage.setItem('moodHistory_v1', JSON.stringify(history));
+                localStorage.setItem('moodHistory_v2', JSON.stringify(history));
             }, [history]);
 
-            const zones = [
-                { id: 'hyper', name: '能量過高', desc: '焦慮、生氣', color: 'bg-red-50 text-red-700 border-red-200', icon: <Flame/>, min: 66, max: 100 },
-                { id: 'ok', name: '容納之窗', desc: '平穩、專注', color: 'bg-green-50 text-green-700 border-green-200', icon: <CloudSun/>, min: 34, max: 65 },
-                { id: 'hypo', name: '能量過低', desc: '無力、想睡', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: <Snowflake/>, min: 0, max: 33 }
-            ];
+            // 處理資料：加上易讀的時間字串 & 排序
+            const processedHistory = useMemo(() => {
+                return history.map(h => ({ ...h, dateStr: formatDate(new Date(h.id)), dateObj: new Date(h.id) }))
+                              .sort((a, b) => a.id - b.id);
+            }, [history]);
+
+            // 篩選資料 (用於列表顯示)
+            const filteredHistory = useMemo(() => {
+                if (!filterDate) return [...processedHistory].reverse();
+                return processedHistory.filter(h => isSameDay(h.dateObj, filterDate)).reverse();
+            }, [processedHistory, filterDate]);
 
             const addRecord = () => {
-                if (!selectedZone) return alert("請先選擇一個區域");
-                const newEntry = {
-                    id: Date.now(),
-                    date: new Date().toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-                    zone: selectedZone.id,
-                    intensity: parseInt(intensity),
-                    note
-                };
+                if (!selectedZone) return;
+                const newEntry = { id: Date.now(), zone: selectedZone.id, intensity: parseInt(intensity), note };
                 setHistory(prev => [...prev, newEntry]);
-                setNote("");
-                setIntensity(50);
-                setSelectedZone(null);
+                setNote(""); setIntensity(50); setSelectedZone(null);
             };
 
-            const clearHistory = () => {
-                if(confirm("確定要清除所有紀錄嗎？此動作無法復原喔！")) setHistory([]);
+            const clearAllHistory = () => confirm("確定要清除所有紀錄嗎？此動作無法復原喔！") && setHistory([]);
+
+            // 新增：刪除單筆紀錄功能
+            const deleteRecord = (idToDelete) => {
+                if (confirm("確定要刪除這一筆紀錄嗎？")) {
+                    setHistory(prev => prev.filter(entry => entry.id !== idToDelete));
+                }
             };
 
-            // 新增：匯出功能 (解決老師想看資料的問題)
             const exportData = () => {
-                if (history.length === 0) return alert("目前沒有紀錄可以匯出喔！");
-                
-                // 製作純文字報表
-                let textContent = "【身心氣象台：情緒紀錄表】\n\n";
-                history.forEach((h, i) => {
-                    textContent += `[${h.date}] 強度:${h.intensity} (${h.zone === 'hyper' ? '過高' : h.zone === 'ok' ? 'OK' : '過低'})\n`;
-                    if(h.note) textContent += `備註: ${h.note}\n`;
-                    textContent += "-------------------\n";
-                });
-
-                const blob = new Blob([textContent], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
+                if (history.length === 0) return alert("沒有紀錄可匯出");
+                const text = history.map(h => {
+                    const date = formatDate(new Date(h.id));
+                    const z = getZone(h.zone);
+                    return `[${date}] ${z.name}(${h.intensity})${h.note ? ': ' + h.note : ''}`;
+                }).join('\n');
+                const blob = new Blob([text], { type: 'text/plain' });
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = `情緒紀錄_${new Date().toISOString().slice(0,10)}.txt`;
-                document.body.appendChild(a);
+                a.href = URL.createObjectURL(blob); a.download = `情緒紀錄_${new Date().toISOString().slice(0,10)}.txt`;
                 a.click();
-                document.body.removeChild(a);
             };
 
-            const handleZoneClick = (z) => {
-                setSelectedZone(z);
-                setIntensity(z.id === 'hyper' ? 85 : z.id === 'ok' ? 50 : 15);
+            const handleZoneClick = (z) => { setSelectedZone(z); setIntensity(z.id === 'hyper' ? 85 : z.id === 'ok' ? 50 : 15); };
+
+            // 快速篩選按鈕
+            const quickFilter = (type) => {
+                const today = new Date();
+                if (type === 'today') setFilterDate(today);
+                // 這裡為了Demo簡單，本週本月先不實作複雜邏輯，概念同理
+                setViewMode('calendar'); // 切換到月曆模式比較直覺
             };
 
             return (
-                <div className="min-h-screen bg-slate-50 p-4 max-w-2xl mx-auto pb-20">
-                    <header className="text-center mb-6">
-                        <h1 className="text-2xl font-bold text-slate-800 flex items-center justify-center gap-2">
-                            <Activity className="text-indigo-600" /> 身心氣象台
+                <div className="min-h-screen bg-slate-50 p-4 max-w-md mx-auto pb-24">
+                    <header className="flex items-center justify-between mb-4">
+                        <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                            <Icons.Activity className="text-indigo-600 w-6 h-6" /> 身心氣象台
                         </h1>
-                        <button onClick={() => setShowInfo(!showInfo)} className="text-xs text-indigo-500 underline mt-2 flex items-center justify-center gap-1 mx-auto">
-                            <Info className="w-3 h-3"/> 這是什麼？
-                        </button>
-                        {showInfo && (
-                            <div className="text-xs text-left bg-white p-3 rounded-lg shadow mt-2 text-slate-600 animate-fadeIn">
-                                就像氣象有晴雨，我們的心也有能量高低。
-                                <br/>🔴 <strong>過高：</strong>像颱風天，停不下來。
-                                <br/>🟢 <strong>OK：</strong>像晴天，舒服自在。
-                                <br/>🔵 <strong>過低：</strong>像陰雨天，提不起勁。
-                            </div>
-                        )}
+                        <div className="flex bg-slate-100 rounded-lg p-0.5">
+                            <button onClick={() => { setViewMode('chart'); setFilterDate(null); }} 
+                                    className={`p-1.5 rounded-md transition-all ${viewMode === 'chart' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}>
+                                <Icons.TrendingUp className="w-5 h-5" />
+                            </button>
+                            <button onClick={() => setViewMode('calendar')} 
+                                    className={`p-1.5 rounded-md transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}>
+                                <Icons.Calendar className="w-5 h-5" />
+                            </button>
+                        </div>
                     </header>
 
-                    {/* 圖表區 */}
+                    {/* 檢視模式切換 */}
                     <div className="mb-6">
-                        <MoodChart history={history} zones={zones} />
+                        {viewMode === 'chart' ? (
+                            <MoodChart data={processedHistory} />
+                        ) : (
+                            <CalendarView data={history} onSelectDate={setFilterDate} />
+                        )}
                     </div>
 
+                    {/* 快速篩選與標題 */}
+                    {viewMode === 'calendar' && (
+                        <div className="flex items-center gap-2 mb-4 overflow-x-auto custom-scrollbar pb-1">
+                            <span className="text-sm font-bold text-slate-700 shrink-0">
+                                {filterDate ? `${filterDate.getMonth()+1}/${filterDate.getDate()} 的紀錄` : '近期紀錄'}
+                            </span>
+                            {filterDate && (
+                                <button onClick={() => setFilterDate(null)} className="text-xs text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    清除篩選 <Icons.X className="w-3 h-3"/>
+                                </button>
+                            )}
+                            <div className="flex-1"></div>
+                            <button onClick={() => quickFilter('today')} className="text-xs bg-white border border-slate-200 px-2 py-1 rounded-full text-slate-500 whitespace-nowrap">今日</button>
+                        </div>
+                    )}
+
                     {/* 輸入區 */}
-                    <div className="grid grid-cols-3 gap-2 mb-4">
+                    <div className="grid grid-cols-3 gap-2 mb-4 animate-fadeIn">
                         {zones.map(z => (
                             <button key={z.id} onClick={() => handleZoneClick(z)}
-                                className={`p-3 rounded-xl border-2 flex flex-col items-center gap-1 transition-all
-                                ${selectedZone?.id === z.id ? `${z.color} border-current ring-2 ring-offset-1 ring-slate-200` : 'bg-white border-slate-100 text-slate-400'}`}>
-                                <div className={selectedZone?.id === z.id ? 'scale-110' : 'opacity-50'}>{z.icon}</div>
-                                <span className="text-sm font-bold">{z.name}</span>
+                                className={`p-2 rounded-xl border-2 flex flex-col items-center gap-1 transition-all
+                                ${selectedZone?.id === z.id ? `${z.color} border-current ring-2 ring-offset-1 ring-slate-200 bg-white` : 'bg-white border-slate-100 text-slate-400'}`}>
+                                <div className={selectedZone?.id === z.id ? 'scale-105' : 'opacity-50'}>{z.icon}</div>
+                                <span className="text-xs font-bold">{z.name}</span>
                             </button>
                         ))}
                     </div>
 
                     {selectedZone && (
-                        <div className="bg-white p-5 rounded-2xl shadow-lg border border-indigo-100 animate-fadeIn mb-8">
-                            <label className="block text-sm font-bold text-slate-700 mb-2">能量強度：{intensity}</label>
+                        <div className="bg-white p-4 rounded-2xl shadow-lg border border-indigo-100 animate-fadeIn mb-6 z-10 relative">
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="text-sm font-bold text-slate-700">強度：<span className="text-indigo-600">{intensity}</span></label>
+                                <button onClick={() => setSelectedZone(null)} className="text-slate-300 hover:text-slate-500"><Icons.X className="w-4 h-4"/></button>
+                            </div>
                             <input type="range" min={selectedZone.min} max={selectedZone.max} value={intensity} 
                                 onChange={(e) => setIntensity(e.target.value)}
-                                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500 mb-4" />
+                                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-500 mb-3" />
                             
-                            <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="發生了什麼事？（選填）"
-                                className="w-full p-3 border border-slate-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="2"></textarea>
+                            <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="備註（選填）..."
+                                className="w-full p-2 border border-slate-200 rounded-xl mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" rows="2"></textarea>
                             
-                            <button onClick={addRecord} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-md active:scale-95 transition-transform">
-                                紀錄下來
+                            <button onClick={addRecord} className="w-full py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
+                                <Icons.Activity className="w-4 h-4"/> 新增紀錄
                             </button>
                         </div>
                     )}
 
-                    {/* 歷史紀錄區 */}
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className="font-bold text-slate-700">歷史紀錄</h3>
+                    {/* 歷史紀錄列表 */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="flex justify-between items-center p-3 border-b border-slate-100 bg-slate-50/50">
+                            <h3 className="font-bold text-slate-700 flex items-center gap-1">
+                                <Icons.List className="w-4 h-4"/> 紀錄列表
+                            </h3>
                             <div className="flex gap-2">
-                                {history.length > 0 && (
-                                    <>
-                                    <button onClick={exportData} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">
-                                        <Download className="w-3 h-3"/> 匯出
-                                    </button>
-                                    <button onClick={clearHistory} className="text-xs flex items-center gap-1 px-2 py-1 rounded bg-red-50 text-red-500 border border-red-100">
-                                        <Trash2 className="w-3 h-3"/> 清除
-                                    </button>
-                                    </>
-                                )}
+                                <button onClick={exportData} className="p-1.5 rounded text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 transition-all"><Icons.Download className="w-4 h-4"/></button>
+                                <button onClick={clearAllHistory} className="p-1.5 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"><Icons.Trash2 className="w-4 h-4"/></button>
                             </div>
                         </div>
-                        <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                            {history.length === 0 ? <div className="text-center text-slate-400 text-xs py-4">還沒有紀錄喔</div> : 
-                                [...history].reverse().map(h => (
-                                <div key={h.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                    <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${h.zone === 'hyper' ? 'bg-red-400' : h.zone === 'ok' ? 'bg-green-400' : 'bg-blue-400'}`}></div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-bold text-slate-700">{h.date}</span>
-                                            <span className="text-xs bg-white px-1.5 rounded border border-slate-200 text-slate-500">強度 {h.intensity}</span>
+                        <div className="max-h-[250px] overflow-y-auto custom-scrollbar p-3 space-y-2">
+                            {filteredHistory.length === 0 ? <div className="text-center text-slate-400 text-xs py-4">{filterDate ? '這一天沒有紀錄喔' : '還沒有紀錄'}</div> : 
+                                filteredHistory.map(h => {
+                                    const z = getZone(h.zone);
+                                    return (
+                                        <div key={h.id} className="flex items-start justify-between gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-100 group">
+                                            <div className="flex items-start gap-2">
+                                                <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0`} style={{background: z.pointColor}}></div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs text-slate-400 font-medium">{h.dateStr.split(' ')[1]}</span>
+                                                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${z.color}`}>{z.name} ({h.intensity})</span>
+                                                    </div>
+                                                    {h.note && <p className="text-sm text-slate-600 mt-0.5">{h.note}</p>}
+                                                </div>
+                                            </div>
+                                            {/* 單筆刪除按鈕 - 滑鼠移過去才出現 */}
+                                            <button onClick={() => deleteRecord(h.id)} 
+                                                    className="p-1 text-slate-300 opacity-0 group-hover:opacity-100 hover:text-red-400 hover:bg-red-50 rounded transition-all shrink-0">
+                                                <Icons.X className="w-4 h-4"/>
+                                            </button>
                                         </div>
-                                        {h.note && <p className="text-sm text-slate-600 mt-1">{h.note}</p>}
-                                    </div>
-                                </div>
-                            ))}
+                                    );
+                                })
+                            }
                         </div>
                     </div>
-                    
-                    <footer className="text-center text-slate-400 text-[10px] mt-8">
-                        資料僅儲存於本機，關閉視窗或清除快取可能會消失<br/>
-                        建議定期匯出備份
-                    </footer>
                 </div>
             );
         };
